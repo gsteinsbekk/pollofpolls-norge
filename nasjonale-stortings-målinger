@@ -1,0 +1,40 @@
+#Hent nasjonale stortingsmålinger
+
+library(rvest)
+library(ggplot2)
+
+#Hent URLene til de 50 siste stortingsmålingene publisert på pollofpolls.no
+URL <- "http://www.pollofpolls.no/?cmd=Maling&filter=riks"
+pg <- read_html(URL)
+head(html_attr(html_nodes(pg, "a"), "href"))
+link_liste <- html_attr(html_nodes(pg, "a"), "href")
+link_liste <- link_liste[grep("Maling", link_liste)]
+link_liste <- link_liste[1:50]
+link_liste <- sub('?', "http://www.pollofpolls.no/", link_liste)
+
+#Hent alle tabellene fra de 30 URLene
+all_tables <- vector("list", length = (length(link_liste)))
+for (i in 1:length(link_liste)) {
+  print(i)
+  result <- try(
+    all_tables[[i]] <- link_liste[i] %>%
+      read_html() %>%
+      html_nodes(xpath='//*[@id="content"]/div[4]/table') %>%
+      html_table()
+  ); if(class(result) == "try-error") next;
+}
+
+#Gjør om tabellene til datarammer, hent ut målingene for SV, og omformater
+poll_siste <- ldply (all_tables, data.frame)
+poll_siste <-data.frame(poll_siste)
+poll_SV <- poll_siste[seq(2, nrow(poll_siste), by=6), c("SV")] 
+poll_SV <- gsub(",", ".", poll_SV)
+poll_SV <- gsub("\\s*\\([^\\)]+\\)","",as.character(poll_SV), ignore.case = T)
+poll_SV <- as.numeric(as.character(poll_SV))
+poll_SV <- as.data.frame(poll_SV)
+
+#Skriv ut målingene med trendlinje
+x <- nrow(poll_SV)
+ggplot(poll_SV, aes(x:1, poll_SV)) +
+  geom_point() + geom_smooth(span = 0.3) +
+  labs(title = "Oppslutning nasjonale stortingsmålinger SV", y = "Prosent", x = "Utvikling siste 50 målinger")
