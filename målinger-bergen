@@ -1,0 +1,31 @@
+#Henter ut meningsmålinger fra Pollofpolls.no - Bergen
+
+library(rvest)
+library(ggplot2)
+
+#Lager en dataramme av de siste meningsmålingene for Bergen
+url <- "http://www.pollofpolls.no/?cmd=Kommunestyre&kommune=1201"
+poll_bergen <- url %>%
+  read_html() %>%
+  html_nodes(xpath='//*[@id="content"]/div[4]/table') %>%
+  html_table()
+poll_bergen <- poll_bergen[[1]]
+poll_df <- data.frame(poll_bergen)
+
+#Henter ut dato for meningsmåling og SVs oppslutning, og formaterer data
+sv_poll_df <- poll_df[1:nrow(poll_df), c("Dato", "SV")]
+sv_poll_df$SV = gsub(",", ".", sv_poll_df$SV)
+sv_poll_df$SV <- gsub("\\s*\\([^\\)]+\\)","",as.character(sv_poll_df$SV), ignore.case = T)
+sv_poll_df$SV <- as.numeric(as.character(sv_poll_df$SV))
+sv_poll_df$Dato <- as.Date(sv_poll_df$Dato, "%d/%m-%Y")
+
+#Legger til valgresultatene for kommunevalgene i 2011 og 2015, og stortingsvalget 2013
+valgres_sv <- data.frame(Dato = c('2013-09-09', '2011-09-12', '2015-09-14'), SV = c(6.4, 4.4, 7.0))
+sv_df <- rbind(sv_poll_df, valgres_sv)
+sv_df <- sv_df[order(sv_df$Dato),]
+
+#Skriver ut punktplot med trendlinje
+ggplot(sv_df, aes(Dato, SV)) + 
+  geom_point() + 
+  geom_smooth(span = 0.3) + 
+  labs(title = "Oppslutning SV i Bergen")
