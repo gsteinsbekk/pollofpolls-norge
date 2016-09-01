@@ -2,6 +2,7 @@
 
 library(rvest)
 library(ggplot2)
+library(plyr); library(dplyr)
 
 #Hent URLene til de 50 siste stortingsmålingene publisert på pollofpolls.no
 URL <- "http://www.pollofpolls.no/?cmd=Maling&filter=riks"
@@ -12,7 +13,7 @@ link_liste <- link_liste[grep("Maling", link_liste)]
 link_liste <- link_liste[1:50]
 link_liste <- sub('?', "http://www.pollofpolls.no/", link_liste)
 
-#Hent alle tabellene fra de 30 URLene
+#Hent alle tabellene fra de 50 URLene
 all_tables <- vector("list", length = (length(link_liste)))
 for (i in 1:length(link_liste)) {
   print(i)
